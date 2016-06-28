@@ -131,21 +131,25 @@ Similarly if RXSEPS is non-nil then the elements of SEPS will be treated as rege
 (expectations
   (desc "lex range")
   (expect "foo-1-3-[2-5]"
-    (regex-collection-list-to-regex '("foo" 1 3 (2 . 5))
-				    (cl-loop for i from 0 upto 9 collect (number-to-string i))
-				    "-" nil nil))
+    (regex-collection-list-to-regex
+     '("foo" 1 3 (2 . 5))
+     (cl-loop for i from 0 upto 9 collect (number-to-string i))
+     "-" nil nil))
   (expect "foo-1-3-\\(?:2\\|3\\|4\\|5\\)"
-    (regex-collection-list-to-regex '("foo" 1 3 (2 . 5))
-				    (cl-loop for i from 0 upto 9 collect (number-to-string i))
-				    "-" t nil))
+    (regex-collection-list-to-regex
+     '("foo" 1 3 (2 . 5))
+     (cl-loop for i from 0 upto 9 collect (number-to-string i))
+     "-" t nil))
   (expect "foo\\s-1\\s-3\\s-[2-5]"
-    (regex-collection-list-to-regex '("foo" 1 3 (2 . 5))
-				    (cl-loop for i from 0 upto 9 collect (number-to-string i))
-				    "\\s-" nil t))
+    (regex-collection-list-to-regex
+     '("foo" 1 3 (2 . 5))
+     (cl-loop for i from 0 upto 9 collect (number-to-string i))
+     "\\s-" nil t))
   (expect "foo\\s-1\\s-3\\s-\\(?:2\\|3\\|4\\|5\\)"
-    (regex-collection-list-to-regex '("foo" 1 3 (2 . 5))
-				    (cl-loop for i from 0 upto 9 collect (number-to-string i))
-				    "\\s-" t t)))
+    (regex-collection-list-to-regex
+     '("foo" 1 3 (2 . 5))
+     (cl-loop for i from 0 upto 9 collect (number-to-string i))
+     "\\s-" t t)))
 
 ;;;###autoload
 ;; simple-call-tree-info: CHECK  :passed:
@@ -375,8 +379,10 @@ i.e. that (funcall PRED (car C)) and (funcall PRED (cdr C)) both return non-nil.
   "Return regexp matching values implied by FIELD arg.
 This is used by `regex-collection-split-into-fields'.
 FIELD can be either:
- - a number  
  - a list of strings
+ - a number
+ - a string containing a number
+ - a regular expression
  - a cons cell containing a pair of numbers
  - a cons cell containing a pair of numbers as strings
  - a cons cell containing a pair of chars as strings"
@@ -386,8 +392,10 @@ FIELD can be either:
       (let ((num (number-to-string field)))
 	(concat "[0-9]\\{1"
 		(if (> (length num) 1) (concat "," (regex-collection-length num))) "\\}")))
-     ((stringp field) ;FIELD arg is single string (assumed to contain an integer)
+     ((and (stringp field) (string-match "[0-9]+" field)) ;FIELD arg is single string containing an integer
       (concat "[0-9]\\{" (regex-collection-length field) "\\}"))
+     ;; if FIELD is any other string its assumed to contain a regexp, and is wrapped in a shy group before returning
+     ((stringp field) (concat "\\(?:" field "\\)"))
      ;; FIELD is '(N . M) where N & M are integers
      ((regex-collection-consp field 'integerp)
       (if (> (car field) (cdr field)) (errorf field))
@@ -423,14 +431,16 @@ FIELD can be either:
 	   '(("[0-9]\\{1,2\\}" . '(1 . 10)) ;DONE
 	     ("[0-9]\\{2\\}" . '("01" . "10")) ;DONE
 	     ("[0-9]\\{1,2\\}" . 32)	;DONE
-	     ("[0-9]\\{2\\}" . "02")	;is this needed? what about regexp fields, e.g "[a-z]"
-	     ("[a-z]\\{1\\}" . '("a" . "z"))
-	     ("a" . '("a" . "a"))
+	     ("[0-9]\\{2\\}" . "02")	;DONE
+	     ("\\(?:foo\\|baa\\)"  . "foo\\|baa") ;DONE
+	     ("\\(?:\\(foo\\|baa\\)\\)"  . "\\(foo\\|baa\\)") ;DONE
+	     ("[a-z]\\{1\\}" . '("a" . "z")) ;DONE
+	     ("a" . '("a" . "a"))				   ;DONE
 	     ("\\(?:choo\\|foo\\|man\\)" . '("foo" "man" "choo"))) ;DONE
 	   do (eval `(expect ,(car args)
 		       (regex-collection-fieldrx ,(cdr args))))))
 
-;; simple-call-tree-info: CHECK  
+;; simple-call-tree-info: DONE
 (defun regex-collection-split-into-fields (str &optional seps fieldvals)
   "Helper function to split STR into list of separate fields.
 
@@ -438,9 +448,10 @@ SEPS can be a regexp matching the separators between fields, or a list of such
 regexps (one for each consecutive separator). FIELDVALS is either a list of field 
 values, or a single field value for all fields. See `regex-collection-fieldrx' 
 for more information about the FIELDVALS argument.
-If both SEPS and FIELDVALS are missing then the separators will be taken to be 
-contiguous sequences of non-word chars, and the text between these sequences will 
-be taken as the fields.
+Only one of SEPS and FIELDVALS needs be specified, if both are specified then SEPS
+gets priority. If both SEPS and FIELDVALS are missing then the separators will be 
+taken to be contiguous sequences of non-word chars, and the text between these 
+sequences will be taken as the fields.
 
 The function returns a list whose first element is the list of fields, and whose
 second element is the list of separators."
@@ -465,16 +476,18 @@ second element is the list of separators."
 		   seppos (match-end 0)))
 	   (setq str2 (append str2 (list (substring str seppos (length str))))))
 	  ;; if we have separate FIELDVALS for each position
-	  ((and (null seps) (listp fieldvals) (not (regex-collection-consp fieldvals)))
+	  ((and (null seps) (listp fieldvals) (listp (cdr fieldvals)))
 	   ;; loop over each field, collecting the separators and fields into SEPS and STR2 respectively
-	   (cl-loop for fieldval in fieldvals
+	   (cl-loop for i from 0 upto (1- (length fieldvals))
+		    for fieldval = (nth i fieldvals)
 		    for fieldrx = (regex-collection-fieldrx fieldval)
-		    do (string-match fieldrx str seppos)
-		    (if (> seppos 0)
-			(setq seps
-			      (append seps (list (substring str seppos (match-beginning 0))))))
+		    if (string-match fieldrx str seppos)
+		    do (if (> seppos 0)
+			   (setq seps
+				 (append seps (list (substring str seppos (match-beginning 0))))))
 		    (setq str2 (append str2 (list (match-string 0 str)))
-			  seppos (match-end 0))))
+			  seppos (match-end 0))
+		    else do (error "No match for field %S: %S" (1+ i) fieldval)))
 	  ;; otherwise use the same FIELDVALS for all positions
 	  ((null seps)
 	   (setq fieldrx (regex-collection-fieldrx fieldvals))
@@ -493,22 +506,17 @@ second element is the list of separators."
 	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" nil '(1 . 10000)))
 	     ('(("01" "02" "2010") ("/" "/")) . ("1/01/02/2010" nil '("01" . "10000")))
 	     ('(("1" "01" "02" "2010") ("/" "/" "/")) . ("1/01/02/2010" "/" nil))
-	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" nil "10000"))
-	     ('(("01" "02") ("/")) . ("01/02/2010" "/" "100")) ;??? what to do when fieldvals contradicts seps ???
-	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" nil nil)))
+	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" nil 10000))
+	     ('(("01" "02" "20" "10") ("/" "/" "")) . ("01/02/2010" nil "10"))
+	     ('(("201") nil) . ("01/02/2010" nil "100"))
+	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" "/" "100")) ; SEPS takes priority over FIELDVALS
+	     ('(("01" "02" "2010") ("/" "/")) . ("01/02/2010" nil nil))
+	     )
 	   do (eval `(expect ,(car args)
 		       (regex-collection-split-into-fields
 			,@(cdr args))))))
 
-;; what about numbers containing decimal points?
-(regex-collection-split-into-fields "1/01/02/2010" "/" '("01" . "10000"))
-(regex-collection-split-into-fields "1/01/02/2010" nil '("01" . "10000"))
-(regex-collection-split-into-fields "01/02/2010" nil "10")
-(regex-collection-split-into-fields "01/02/2010" nil '(1 . 1000))
-(regex-collection-split-into-fields "01/02/2010" "/" nil)
-(regex-collection-split-into-fields "01/02/2010" nil '("01" "01" "01" "20" "01"))
-
-;; simple-call-tree-info: TODO
+;; simple-call-tree-info: CHECK
 (defun regex-collection-range-regex (start end &optional fieldvals seps rxseps colex)
   "Return a regexp matching all strings between START and END strings, in lexicographic order.
 The START and END strings are treated as sequences of fields and separators, e.g: \"01/01/2000\".
