@@ -1,9 +1,12 @@
-* Possible Dependencies
+* zsh
+| regex-collection.sh | a collection of variables containing regular expressions (basic, extended & perl) |
+| testregexp          | a function for testing regular expressions                                        |
+* Elisp
+** Possible Dependencies
 
-ample-regexps dash
+ample-regexps, dash
 
-
-* Installation
+** Installation
 
  - Put the library in a directory in the emacs load path, like ~/.emacs.d
  - You can add a directory to your load-path with the following line in ~/.emacs
@@ -12,42 +15,9 @@ ample-regexps dash
    (you don't need to do this for ~/.emacs.d - it's added by default).
  - Add the following to your ~/.emacs startup file: (require 'regex-collection)
 
-* Functions & macros
-** Internal Functions
+** Main Functions
+| regex-collection-range-regex | create a regular expression matching all strings between initial and ending strings which can be numbers, words, dates, ip addresses, etc. |
+| regex-collection-optimize    | optimize a regular expression (UNFINISHED)                                                                                                 |
+| regex-collection-invalidp    | check if regular expression is valid (UNFINISHED)                                                                                          |
 
-*** regex-collection-lex-range
-regex-collection-lex-range is a Lisp function.
 
-=(regex-collection-lex-range MIN MAX MAXDIGIT &optional PAD)=
-
-Return lists representing all sequences between MIN and MAX in lexicographic order.
-MIN and MAX are lists of numbers representing sequences that can be ordered, e.g. decimal 
-numbers (each item in the list represents a digit), words (each item represents a letter), 
-dates (first item represents a day, second item represents a month, third item represents 
-a year), etc. In each position 0 represents the lowest digit/letter/day/etc. The MAXDIGIT
-argument can be either a single positive integer representing the highest digit/letter/day/etc.
-or a list of such integers - one for each position in the MAX list (so that different positions
-can have different numbers of digits, e.g. dates).
-MIN cannot be longer than MAX; if shorter then resulting lists will be left-padded with PAD
- (note: PAD should not be a number or a list).
-The return value is a list of lists, each representing a set of sequences between MIN and MAX.
-The elements of the returned lists are either single numbers (representing digits/letters/days/etc.)
-or cons cells representing a range of digits/letter/days/etc.
-
-*** regex-collection-list-to-regex
-regex-collection-list-to-regex is a Lisp function.
-
-=(regex-collection-list-to-regex LST STRS &optional SEPS RXSTRS RXSEPS)=
-
-Convert a list of numbers and corresponding strings to a regular expression.
-LST should be a list of positive integers and cons cells of pairs of integers, 
-and strs should be either a list of strings, or a list of such lists.
-A number, n, in position pos of LST will be exchanged for either the nth element 
-of DIGITS (if DIGITS is a list of strings) or the nth element of the pos'th list
-in DIGITS (if DIGITS is a list of lists). A regular expression will then be returned
-which matches the sequence of strings produced. Any cons cells in LST will be exchanged
-for a regexp which matches all strings corresponding to indices between the pair of 
-numbers in the cons cell.
-If RXSTRS is non-nil then the elements of STRS will be treated as regexps otherwise
-they will be treated as strings and =regexp-quote= will be applied to them.
-Similarly if RXSEPS is non-nil then the elements of SEPS will be treated as regexps.
