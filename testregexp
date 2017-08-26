@@ -1,0 +1,94 @@
+# testregexp : a zsh function for testing regular expressions
+
+# Written by Joe Bloggs [2017-08-26 Sat]
+
+# Place this file in one of the directories listed in your $fpath variable
+# Then you can load it at the zsh prompt with: autoload -zU testregexp
+
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; see the file COPYING.
+# If not, see <http://www.gnu.org/licenses/>.
+
+# Function for testing regexps.
+testregexp() {
+    typeset USAGE="Usage: testregex [OPTIONS] \"<REGEX>\" \"<STRING>\" [\"<STRING>\"..]
+Tests if <REGEX> matches all strings. Non-matching strings are printed.
+where OPTIONS are: 
+
+ -h  = show this help
+ -q  = quiet - don't print non-matches/matches
+ -n  = test for non-matches instead of matches (i.e. return status 0 if no strings match <REGEX>)
+ -p  = assume the first argument is a Perl compatible regexp (PCRE)\n"
+    typeset NEGATE QUIET
+    while getopts "hnqp" option; do
+	case $option in
+	    (h)
+		echo "$USAGE"
+		return 0
+		;;
+            (\?)
+		echo "$USAGE"
+		return 1
+		;;
+	    (n)
+		NEGATE=1
+		;;
+	    (p)
+		PCRE=1
+		;;
+	    (q)
+		QUIET=1
+		;;
+	esac 
+    done
+    if [[ "$#" -lt 2 ]]; then
+	echo "${USAGE}"
+	exit 1
+    fi
+    if [ -n "${PCRE}" ]; then
+	zmodload -F zsh/pcre +C:pcre-match
+    fi
+    typeset REGEX="${@[OPTIND]}"
+    typeset FAIL=
+    for string in "${@[((OPTIND+1)),-1]}"; do
+	if [ -n "${PCRE}" ]; then
+	    [[ "${string}" -pcre-match "${REGEX}" ]]
+	else
+	    [[ "${string}" =~ "${REGEX}" ]]
+	fi
+	MATCHED="${?}"	
+	if [[ "${MATCHED}" -eq 1 ]]; then
+	    if [ -z "${NEGATE}" ]; then
+		FAIL=1
+		if [ -z "${QUIET}" ]; then
+		    echo "error: \"${string}\" didn't match"
+		fi
+	    fi
+	elif [[ -n "${NEGATE}" ]]; then
+	    FAIL=1
+	    if [ -z "${QUIET}" ]; then
+		echo "error: \"${string}\" matched"
+	    fi
+	fi
+    done
+    if [ -n "${FAIL}" ]; then
+	return 1
+    elif [ -z "${QUIET}" ]; then
+	if [ -z "${NEGATE}" ]; then
+	    echo "All strings matched"
+	else
+	    echo "No strings matched"
+	fi
+	return 0
+    fi
+}

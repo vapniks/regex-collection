@@ -1388,8 +1388,6 @@ will be removed unless KEEPPARENS is non-nil."
 		     do (setq pos (cl-fifth subx)))
 	    (substring rx pos))))
 
-;; (regex-collection-invalidp (regex-collection-act-on-subexps (car (regex-collection-parts (regex-collection-remove-redundant (regex-collection-range-regex "0.0.0.0" "255.255.255.255" '(255 255 255 255))))) 'regex-collection-optimize))
-
 (expectations
   (desc "act on subexps")
   (expect "foo" (regex-collection-act-on-subexps "foo" 'identity))
@@ -1403,80 +1401,6 @@ will be removed unless KEEPPARENS is non-nil."
     (regex-collection-act-on-subexps "a\\(foo\\)z\\(?:choo\\)" 'upcase))
   (expect "a\\(\\)z\\(\\)"
     (regex-collection-act-on-subexps "a\\(foo\\)z\\(choo\\)" (lambda (x) ""))))
-
-;; extra arg to specify strategy to use: left-to-right stragegy, and recursive strategy, or both (smallest is chosen)
-;; simple-call-tree-info: TODO
-(defun regex-collection-best-split (parts)
-  (if (= (length parts) 1)
-      (car parts)
-    (cl-flet* ( ;; aggregate any single char parts into a single part consisting of a character alternative  
-	       (getcharparts (parts)
-			     (cl-loop for part in parts
-				      if (= (length part) 1) collect part into chars
-				      else collect part into strings
-				      finally return
-				      (if chars
-					  (cons (regex-collection-chargroup chars) strings)
-					strings)))
-	       ;; create regex from parts
-	       (makerx (px lst prefixp)
-		       (let* ( ;; q1 indicates if one string will be empty after removing prefix/suffix
-			      (q1 (member px lst)) 
-			      ;; func removes the prefix/suffix from a string
-			      (func (if prefixp (lambda (s) (substring s (length px)))
-				      (lambda (s) (substring s 0 (if (> (length px) 0)
-								     (- (length px)))))))
-			      ;; aggregate parts consisting of single chars into a single char alternatives part
-			      (lst1 (getcharparts (mapcar func (cl-remove px lst :test 'equal))))
-			      ;; q2 indicates if we should enclose the regex in parentheses or not
-			      (q2 (or (and (> (length lst1) 1)
-					   (or q1 (> (length px) 0)))
-				      (and q1 (not (string-match
-						    (concat "^" regex-collection-chargroup-regex "$")
-						    (car lst1)))))))
-			 (concat (if prefixp px)
-				 (if (> (length lst) 1)
-				     (concat (when q2 "\\(?:")
-					     (mapconcat 'identity lst1 "\\|")
-					     (when q2 "\\)")
-					     (if q1 "?"))
-				   (if lst (car lst) ""))
-				 (if (not prefixp) px)))))
-      (cl-loop for i from (length lst) downto 1
-	       for lst1 = (cl-subseq lst 0 i)
-	       for lst2 = (cl-subseq lst i)
-	       for rlst1 = (cl-subseq rlst 0 i)
-	       for rlst2 = (cl-subseq rlst i)
-	       for regexp1 = (makerx (if (and lst1 (> (length lst1) 1))
-					 (regex-collection-prefix lst1)
-				       "") lst1 t)
-	       for regexp2 = (makerx (if (and lst2 (> (length lst2) 1))
-					 (regex-collection-prefix lst2)
-				       "") lst2 t)
-	       for regexs1 = (makerx (if (and rlst1 (> (length rlst1) 1))
-					 (regex-collection-suffix rlst1)
-				       "") rlst1 nil)
-	       for regexs2 = (makerx (if (and rlst2 (> (length rlst2) 1))
-					 (regex-collection-suffix rlst2)
-				       "") rlst2 nil)
-	       for plen = (+ (length regexp1) 2 (length regexp2))
-	       for slen = (+ (length regexs1) 2 (length regexs2))
-	       do (cond ((and (< plen minlen) (<= plen slen)
-			      (or (/= prevplen plen) (/= prevslen slen)))
-			 (setq best (concat regexp1
-					    (if (and (> (length regexp1) 0)
-						     (> (length regexp2) 0))
-						"\\|") regexp2)
-			       minlen plen prevplen plen prevslen slen))
-			((and (< slen minlen) (< slen plen)
-			      (or (/= prevplen plen) (/= prevslen slen)))
-			 (setq best (concat regexs1
-					    (if (and (> (length regexs1) 0)
-						     (> (length regexs2) 0))
-						"\\|") regexs2)
-			       minlen slen prevplen plen prevslen slen))
-			(t (setq prevplen plen prevslen slen)))))
-    best))
 
 ;; simple-call-tree-info: CHECK
 (defun regex-collection-lex-sort (strs)
@@ -1568,8 +1492,8 @@ is sorted colexicographically (to make it easier to find a common suffix)."
 			 (append rest (and chargrps
 					   (list (-reduce 'regex-collection-merge-chargroups chargrps)))))))
       ;; function for extracting prefix/suffix and creating regexp
-      (cl-flet ((process (suffixp)	;suffixp indicates whether we are extracting a prefixes or suffixes
-			 (let* ((res (regex-collection-fix-subseq regexs suffixp))
+      (cl-flet ((process (rxs sfxp) ;suffixp indicates whether we are extracting a prefixes or suffixes
+			 (let* ((res (regex-collection-fix-subseq rxs sfxp))
 				(start (cl-first res))
 				(end (cl-second res))
 				(fix (cl-third res))
@@ -1577,41 +1501,41 @@ is sorted colexicographically (to make it easier to find a common suffix)."
 				fixes parts)
 			   ;; if no (pre/suf)fix can be extracted return nil
 			   (unless (= len 0)
-			     ;; otherwise find consecutive group of regexs with common (pre/suf)fix
+			     ;; otherwise find consecutive group of rxs with common (pre/suf)fix
 			     ;; and create single regexp from them
 			     (setq fixes (regex-collection-opt-group
-					  (mapcar (lambda (s) (if suffixp (substring s 0 (- len))
+					  (mapcar (lambda (s) (if sfxp (substring s 0 (- len))
 								(substring s len)))
-						  (cl-subseq regexs start end))
-					  suffixp)
+						  (cl-subseq rxs start end))
+					  sfxp)
 				   ;; get parts of new regexp so we can put the prefixes/suffixes
 				   ;; back if this turns out to be shorter
 				   parts (regex-collection-parts fixes))
 			     (concat
-			      (if (> start 0) ;if there are regexs before those in `fixes'
+			      (if (> start 0) ;if there are rxs before those in `fixes'
 				  ;; create regexp by sorting and extracting (suf/pre)fix from other end
 				  ;; of each regex, since there is no common (pre/suf)fix at this end
 				  (concat (regex-collection-opt-group
-					   (funcall othersortfn (cl-subseq regexs 0 start))
-					   (not suffixp))
+					   (funcall othersortfn (cl-subseq rxs 0 start))
+					   (not sfxp))
 					  "\\|"))
-			      ;; for regexs with common (pre/suf)fix..
+			      ;; for rxs with common (pre/suf)fix..
 			      (if (< (+ len 6) (* len (length parts)))
 				  ;; use extracted (pre/suf)fix only if result is shorter
-				  (concat (unless suffixp fix)
+				  (concat (unless sfxp fix)
 					  (if (> (length parts) 1) (concat "\\(?:" fixes "\\)") fixes)
-					  (if suffixp fix))
+					  (if sfxp fix))
 				;; otherwise put the (pre/suf)fix back again
-				(mapconcat (if suffixp (lambda (s) (concat s fix))
+				(mapconcat (if sfxp (lambda (s) (concat s fix))
 					     (lambda (s) (concat fix s)))
 					   parts "\\|"))
 			      ;; create regex for last group (no need to change end from which
 			      ;; (pre/suf)fix is extracted, or sort order)
-			      (if (< end (length regexs))
+			      (if (< end (length rxs))
 				  (concat "\\|" (regex-collection-opt-group
-						 (cl-subseq regexs end) suffixp))))))))
-	(or (process suffixp) ;; try extracting a common (pre/suf)fix
-	    (process (not suffixp)) ;; or a common (suf/pre)fix
+						 (cl-subseq rxs end) sfxp))))))))
+	(or (process regexs suffixp) ;; try extracting a common (pre/suf)fix
+	    (process (funcall othersortfn regexs) (not suffixp)) ;; or a common (suf/pre)fix
 	    ;; otherwise just join the regexs together
 	    (mapconcat 'identity regexs "\\|")))))))
 
@@ -1624,7 +1548,10 @@ is sorted colexicographically (to make it easier to find a common suffix)."
      (sort '("[0-9]0" "[0-9]1" "[0-9]2" "[0-9]3" "[0-9]4" "[0-5]5" "[0-9]") 'string-lessp)))
   (expect "0000[012]\\|0001[12]\\|0011[12]\\|0111[12]"
     (regex-collection-opt-group '("00000" "00001" "00002" "00011" "00012" "00111" "00112" "01111" "01112")))
-  (expect "[0-9a-z]" (regex-collection-opt-group '("[a-z]" "[0-9]"))))
+  (expect "[0-9a-z]" (regex-collection-opt-group '("[a-z]" "[0-9]")))
+  (expect "1\\(?:[0-9]\\|[0-9][0-9]\\)\\|2\\(?:[0-4][0-9]\\|5[0-5]\\|[0-9]\\)"
+    (regex-collection-opt-group '("1\\(?:[0-9]\\|[0-9][0-9]\\)" "2\\(?:[0-4][0-9]\\|5[0-5]\\|[0-9]\\)")))
+  (expect "5[0-5]\\|[012]?[0-9]" (regex-collection-opt-group '("0[0-9]" "1[0-9]" "5[0-5]" "2[0-9]" "[0-9]"))))
 
 ;; simple-call-tree-info: CHECK
 (defun regex-collection-remove-redundant (regex &optional nonshy)
@@ -1675,9 +1602,9 @@ If NONSHY is non-nil then also remove unnecessary non-shy group parentheses."
     ;; split regex into separate parts and recursively
     ;; optimize subexpressions within each part
     (if (string-match "\\\\|" regex2)
-	;; now find prefixes & suffixes, and remove from parts
-	(regex-collection-remove-redundant
-	 (regex-collection-opt-group
+	;; extract common prefixes & suffixes from separate parts
+	(regex-collection-opt-group
+	 (regex-collection-lex-sort
 	  (cl-loop for part in (regex-collection-parts regex2)
 		   ;; optimize subexpressions recursively
 		   collect (regex-collection-act-on-subexps part 'regex-collection-optimize))))
@@ -1722,8 +1649,8 @@ If NONSHY is non-nil then also remove unnecessary non-shy group parentheses."
     (regex-collection-optimize "\\(?1:aa\\)+?\\|\\(?2:bb\\)+?\\|\\(?3:cc\\)+?"))
   (expect "aazz\\{1,5\\}\\|bbzz\\{2,5\\}\\|cczz\\{3,5\\}"
     (regex-collection-optimize "aazz\\{1,5\\}\\|bbzz\\{2,5\\}\\|cczz\\{3,5\\}"))
-  ;;(expect "\\(?:[0-4]?[0-9]\\|5[0-5]\\)" (regex-collection-optimize "\\(?:0[0-9]\\|1[0-9]\\|2[0-9]\\|3[0-9]\\|4[0-9]\\|5[0-5]\\|[0-9]\\)"))
-  )
+  (expect "5[0-5]\\|[0-4]?[0-9]"
+    (regex-collection-optimize "0[0-9]\\|1[0-9]\\|2[0-9]\\|3[0-9]\\|4[0-9]\\|5[0-5]\\|[0-9]")))
 
 ;; simple-call-tree-info: TODO
 (defun regex-collection-invalidp (regex &optional throwerror)
