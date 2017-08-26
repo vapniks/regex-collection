@@ -1,6 +1,6 @@
 * zsh
-| regex-collection.sh | a collection of variables containing regular expressions (basic, extended & perl) |
-| testregexp          | a function for testing regular expressions                                        |
+| regex-collection.sh | a collection of variables containing useful regular expressions (matching URLs, IP addresses, postcodes, etc.) |
+| testregexp          | a function for testing regular expressions                                                                     |
 * Elisp
 ** Possible Dependencies
 
