@@ -36,30 +36,30 @@
 # along with this program; see the file COPYING.
 # If not, see <http://www.gnu.org/licenses/>.
 
+# TODO: finish writing tests and fix regexps
+
 source "$(dirname $0)/testregexp"
 
-# general purpose csv field, either quoted or unquoted, not including delimiters
-# ERE version doesn't check delimiters, PCRE version does
-# e.g. find lines of data.csv where No. of csv fields isn't 10: grep -v -x -P "^$PCRE_CSVFIELD{10}$" data.csv
-ERE_CSVFIELD="(\"[^\"]*\"|'[^']*'|[^\"'][^,]*)"
-echo testing ERE_CSVFIELD
-testregexp "^${ERE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\""
-testregexp -n "^${ERE_CSVFIELD}$" "1,2,3" "\"a\"b\"" 
-PCRE_CSVFIELD="((?:^|,)\K(?:\"[^\"]*\"|\'[^\']*\'|[^,]*)(?=(?:,|$)))"
-echo testing PCRE_CSVFIELD
-testregexp -p "^${PCRE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\""
-testregexp -p -n "^${PCRE_CSVFIELD}$" "1,2,3" "\"a\"b\"" 
 # quoted general purpose csv field, not including delimiters
 # ERE version doesn't check delimiters, PCRE version does
-ERE_QUOTEDCSVFIELD="(\"[^\"]*\"|\'[^\']*\')"
-PCRE_QUOTEDCSVFIELD="((?:^|,)\K(?:\"[^\"]*\"|\'[^\']*\')(?=(?:,|$)))"
+ERE_QUOTEDCSVFIELD="(?:\"[^\"]*\"|\'[^\']*\')"
+PCRE_QUOTEDCSVFIELD="(?:(?:^|,)\K(?:\"[^\"]*\"|\'[^\']*\')(?=(?:,|$)))"
 # unquoted general purpose csv field, not including delimiters
 # ERE version doesn't check delimiters, PCRE version does
-ERE_UNQUOTEDCSVFIELD="([^\"'][^,]*|)"
-PCRE_UNQUOTEDCSVFIELD="((?:^|,)\K(?:[^,\"\']*)(?=(?:,|$)))"
-# general purpose csv field, either quoted or unquoted, including delimiter (assumes 1st field is non-empty)
-# e.g. find lines of data.csv where No. of csv fields isn't 10: grep -v -x -E "^$ERE_CSVFIELDWITHDELIM{10}$" data.csv
-ERE_CSVFIELDWITHDELIM="(^(?:\"[^\"]*\"|\'[^\']*\'|[^,]+)|,(:?\"[^\"]*\"|\'[^\']*\'|[^,]*))"
+ERE_UNQUOTEDCSVFIELD="(?:[^\"'][^,]*|)"
+PCRE_UNQUOTEDCSVFIELD="(?:(?:^|,)\K(?:[^,\"\'][^,]*|)(?=(?:,|$)))"
+# general purpose csv field, either quoted or unquoted, not including delimiters
+# ERE version doesn't check delimiters, PCRE version does
+# e.g. find lines of data.csv where No. of csv fields isn't 10: grep -v -x -P "^${PCRE_CSVFIELD}{10}$" data.csv
+# or: grep -v -x -E "^${ERE_CSVFIELDWITHDELIM}{10}$" data.csv
+ERE_CSVFIELD="(${ERE_QUOTEDCSVFIELD}|${ERE_UNQUOTEDCSVFIELD})"
+ERE_CSVFIELDWITHDELIM="((?:^|,)${ERE_CSVFIELD})"
+PCRE_CSVFIELD="(${PCRE_QUOTEDCSVFIELD}|${PCRE_UNQUOTEDCSVFIELD})"
+echo testing CSVFIELD regexps
+testregexp "^${ERE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
+testregexp -n "^${ERE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
+testregexp -p "^${PCRE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
+testregexp -p -n "^${PCRE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
 # datestamp in the form DD/MM/YYYY (contains 1 subgroup)
 ERE_DATE="([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2})"
 # datestamp in the form DD/MM/YYYY HH:MM (contains 1 subgroup)
