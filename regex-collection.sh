@@ -15,6 +15,10 @@
 
 # You can find more regular expressions here: http://regexlib.com/
 
+# For testing purposes make sure the testregexp function is defined or is available in the same directory as this
+# file, and source this file after setting TESTREGEXP to a non-empty string, like this:
+# > TESTREGEXP=t source regex-collection.sh
+
 # Notes: if parsing text files containing strange non-ascii chars some of these regexps might not match as intended.
 #        You can convert to ascii using "iconv -t ASCII//IGNORE" or "iconv -t ASCII//TRANSLIT" on the command line.
 #
@@ -38,7 +42,9 @@
 
 # TODO: finish writing tests and fix regexps
 
-source "$(dirname $0)/testregexp"
+if [[ -r "$(dirname $0)/testregexp" ]]; then
+    source "$(dirname $0)/testregexp"
+fi
 
 # quoted general purpose csv field, not including delimiters
 # ERE version doesn't check delimiters, PCRE version does
@@ -55,11 +61,13 @@ PCRE_UNQUOTEDCSVFIELD="(?:(?:^|,)\K(?:[^,\"\'][^,]*|)(?=(?:,|$)))"
 ERE_CSVFIELD="(${ERE_QUOTEDCSVFIELD}|${ERE_UNQUOTEDCSVFIELD})"
 ERE_CSVFIELDWITHDELIM="((?:^|,)${ERE_CSVFIELD})"
 PCRE_CSVFIELD="(${PCRE_QUOTEDCSVFIELD}|${PCRE_UNQUOTEDCSVFIELD})"
-echo testing CSVFIELD regexps
-testregexp "^${ERE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
-testregexp -n "^${ERE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
-testregexp -p "^${PCRE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
-testregexp -p -n "^${PCRE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
+if [[ -n ${TESTREGEXP} ]]; then
+    echo testing CSVFIELD regexps
+    testregexp "^${ERE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
+    testregexp -n "^${ERE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
+    testregexp -p "^${PCRE_CSVFIELD}$" "'1,2,3'" "fsad" "\"foo\"" "\"as'cd'df\"" ""
+    testregexp -p -n "^${PCRE_CSVFIELD}$" "1,2,3" "\"a\"b\"" "'as'df'"
+fi
 # datestamp in the form DD/MM/YYYY (contains 1 subgroup)
 ERE_DATE="([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2})"
 # datestamp in the form DD/MM/YYYY HH:MM (contains 1 subgroup)
