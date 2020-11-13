@@ -28,7 +28,7 @@ where OPTIONS are:
  -q  = quiet - don't print non-matches/matches
  -n  = test for non-matches instead of matches (i.e. return status 0 if no strings match <REGEX>)
  -p  = assume the first argument is a Perl compatible regexp (PCRE)\n"
-typeset NEGATE QUIET
+typeset NEGATE PCRE QUIET
 while getopts "hnqp" option; do
     case $option in
 	(h)
@@ -91,4 +91,4 @@ elif [ -z "${QUIET}" ]; then
     return 0
 fi
 
-
+unset NEGATE PCRE QUIET
