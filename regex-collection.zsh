@@ -73,9 +73,9 @@ if [[ -n ${TESTREGEXP} ]]; then
     testregexp -p -n "^${RC_PCRE[csvfield]}$" "1,2,3" "\"a\"b\"" "'as'df'"
 fi
 # datestamp in the form DD/MM/YYYY (contains 1 subgroup)
-RC_ERE[date]="([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2})"
+RC_ERE[date]="([0-9]{2}\/[0-9]{2}\/(19|20)[0-9]{2})"
 # datestamp in the form DD/MM/YYYY HH:MM (contains 1 subgroup)
-RC_ERE[datetime]="([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2} [012][0-9]:[012345][0-9])"
+RC_ERE[datetime]="([0-9]{2}\/[0-9]{2}\/(19|20)[0-9]{2} [012][0-9]:[012345][0-9])"
 # timestamp in the form HH:MM:SS
 RC_ERE[timehms]="([012][0-9]:[012345][0-9]:[012345][0-9])"
 # timestamp in the form HH:MM
@@ -144,22 +144,22 @@ RC_ERE[subnet_prefix_len]="([0-9]|[0-2][0-9]|3[0-2])"
 # MAC address (contains 2 subgroups)
 RC_ERE[mac]="(([0-9a-fA-F][0-9a-fA-F]:){5}([0-9a-fA-F][0-9a-fA-F]))"
 # IPv4 address with optional port or subnet (contains 3 subgroups - 1st octet, final 3 octets & optional :port/subnet)
-RC_ERE[ipv4]="((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}(:${RC_ERE[port]}|/${RC_ERE[subnet_prefix_len]})?)"
+RC_ERE[ipv4]="((25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})(\.(25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}(:${RC_ERE[port]}|\/${RC_ERE[subnet_prefix_len]})?)"
 # IPv6 address (compressed or uncompressed) with optional port or subnet
 # (contains 3 subgroups - 1st octet, final 3 octets & optional :port/subnet)
-RC_ERE[ipv6]="(([0-9a-fA-F]{0,4}:){2,7}(:|[0-9a-fA-F]{1,4})(:${RC_ERE[port]}|/${RC_ERE[subnet_prefix_len]})?)"
+RC_ERE[ipv6]="(([0-9a-fA-F]{0,4}:){2,7}(:|[0-9a-fA-F]{1,4})(:${RC_ERE[port]}|\/${RC_ERE[subnet_prefix_len]})?)"
 # Version 3/4 UUID 
 RC_ERE[uuid]="([A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[34][A-Fa-f0-9]{3}-[89ab][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12})"
 # domain names
 RC_ERE[domain_name]="([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})"
 # Any valid http/https/ftp URL (contains 3 subgroups - the protocol, domain name, and optional query at the end of the URL)
-RC_ERE[url]="((https?|ftp)://${RC_ERE[domain_name]}(/\S*)?)"
+RC_ERE[url]="((https?|ftp):\/\/${RC_ERE[domain_name]}(\/\S*)?)"
 # An FTP URL (contains 2 subgroups - the domain name and optional query at the end of the URL)
-RC_ERE[ftp]="(ftp://${RC_ERE[domain_name]}(/\S*)?)"
+RC_ERE[ftp]="(ftp:\/\/${RC_ERE[domain_name]}(\/\S*)?)"
 # An HTTP URL (contains 2 subgroups - the domain name and optional query at the end of the URL)
-RC_ERE[http]="(http://${RC_ERE[domain_name]}(/\S*)?)"
+RC_ERE[http]="(http:\/\/${RC_ERE[domain_name]}(\/\S*)?)"
 # An HTTPS URL (contains 2 subgroups - the domain name and optional query at the end of the URL)
-RC_ERE[https]="(https://${RC_ERE[domain_name]}(/\S*)?)"
+RC_ERE[https]="(https:\/\/${RC_ERE[domain_name]}(\/\S*)?)"
 # Output from 'ls -l', with the following subgroups:
 # \1 = file permissions, \2 = number of files, \3 = GID, \4 = UID, \5 = size, \6 = date, \7 = filename
 RC_ERE[ll]="([rwdx-]{10})\s+([0-9]+)\s+([a-z]+) ([a-z]+)\s+([0-9.KMG]+) ([a-zA-Z]+\s+[0-9]+\s+[0-9:]+) (.+)$"
