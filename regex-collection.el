@@ -567,6 +567,7 @@ second element is the list of separators."
 
 ;; TODO: what about different orderings apart from lex and colex, e.g. american style dates: 01/31/2010 = Jan 31 2010
 ;; (could have an order arg - a list of numbers indicating order of fields, then rearrange the fields and get lex range)
+;; FIXME: The regexps produced by this function are far too long.
 ;; simple-call-tree-info: TODO
 (defun regex-collection-range-regex (start end &optional fieldvals seps rxseps colex)
   "Return a regexp matching all strings between START and END strings, in lexicographic order.
@@ -653,59 +654,59 @@ Examples:
 	       (setidxs (min max i) (setf (nth i start3) min (nth i end3) max)) ;set indices for obtaining range
 	       ;; check if min & max are members of a list in `regex-collection-word-lists'
 	       (getsymb (min max)
-			(and (stringp min)
-			     (stringp max)
-			     (save-match-data 
-			       (cl-loop for (symb desc lst) in regex-collection-word-lists
-					for regex = (regexp-opt (-flatten lst))
-					if (and (posix-string-match regex min)
-						(= (match-beginning 0) 0)
-						(= (match-end 0) (length min))
-						(posix-string-match regex max)
-						(= (match-beginning 0) 0)
-						(= (match-end 0) (length max)))
-					return symb))))
+		 (and (stringp min)
+		      (stringp max)
+		      (save-match-data 
+			(cl-loop for (symb desc lst) in regex-collection-word-lists
+				 for regex = (regexp-opt (-flatten lst))
+				 if (and (posix-string-match regex min)
+					 (= (match-beginning 0) 0)
+					 (= (match-end 0) (length min))
+					 (posix-string-match regex max)
+					 (= (match-beginning 0) 0)
+					 (= (match-end 0) (length max)))
+				 return symb))))
 	       (getval (i min max vals)	;get value corresponding to index i
-		       (cond ((and vals (listp vals) (listp (cdr vals))) ;string in list
-			      (nth i vals))
-			     ;; vals can be a symbol referring to an element of `regex-collection-word-lists'
-			     ((and vals (symbolp vals) (assoc vals regex-collection-word-lists))
-			      (nth i (cl-third (assoc vals regex-collection-word-lists))))
-			     ;; integers (vals can be an integer, string containing an integer, 
-			     ;;           or a cons cell of those things)
-			     ((regex-collection-consp
-			       (cons min max) 'regex-collection-integerp)
-			      (let ((minval2 (string-to-number min))
-				    (maxval2 (string-to-number max)))
-				(cond ((or (integerp vals)
-					   (regex-collection-integerp vals))
-				       (number-to-string i))
-				      ((regex-collection-consp vals 'integerp)
-				       (number-to-string (+ i (car vals))))
-				      ((regex-collection-consp vals 'regex-collection-integerp)
-				       (number-to-string (+ i (string-to-number (car vals)))))
-				      ((null vals) (number-to-string (+ i minval2)))
-				      (t (errorm min max)))))
-			     ;; chars
-			     ((regex-collection-consp
-			       (cons min max) 'regex-collection-charp)
-			      ;; vals must be a cons cell, since other case (vals is a list)
-			      ;; has already been dealth with
-			      (unless (regex-collection-consp vals 'regex-collection-charp)
-				(errorm min max))
-			      (char-to-string (+ (string-to-char min) i)))
-			     ;; nil values
-			     ((and (regex-collection-integerp minval) (null maxval))
-			      (number-to-string (+ i (if vals 0 (string-to-number minval)))))
-			     ((null minval)
-			      (number-to-string i))
-			     ;; check if min and max are members of one of the lists in `regex-collection-word-lists'
-			     ;; (this might not always get the right word list)
-			     ((getsymb min max)
-			      (let ((symb (getsymb min max)))
-				(regex-collection-word-index symb i t)))
-			     ;; anything else
-			     (t (errorm min max)))))
+		 (cond ((and vals (listp vals) (listp (cdr vals))) ;string in list
+			(nth i vals))
+		       ;; vals can be a symbol referring to an element of `regex-collection-word-lists'
+		       ((and vals (symbolp vals) (assoc vals regex-collection-word-lists))
+			(nth i (cl-third (assoc vals regex-collection-word-lists))))
+		       ;; integers (vals can be an integer, string containing an integer, 
+		       ;;           or a cons cell of those things)
+		       ((regex-collection-consp
+			 (cons min max) 'regex-collection-integerp)
+			(let ((minval2 (string-to-number min))
+			      (maxval2 (string-to-number max)))
+			  (cond ((or (integerp vals)
+				     (regex-collection-integerp vals))
+				 (number-to-string i))
+				((regex-collection-consp vals 'integerp)
+				 (number-to-string (+ i (car vals))))
+				((regex-collection-consp vals 'regex-collection-integerp)
+				 (number-to-string (+ i (string-to-number (car vals)))))
+				((null vals) (number-to-string (+ i minval2)))
+				(t (errorm min max)))))
+		       ;; chars
+		       ((regex-collection-consp
+			 (cons min max) 'regex-collection-charp)
+			;; vals must be a cons cell, since other case (vals is a list)
+			;; has already been dealth with
+			(unless (regex-collection-consp vals 'regex-collection-charp)
+			  (errorm min max))
+			(char-to-string (+ (string-to-char min) i)))
+		       ;; nil values
+		       ((and (regex-collection-integerp minval) (null maxval))
+			(number-to-string (+ i (if vals 0 (string-to-number minval)))))
+		       ((null minval)
+			(number-to-string i))
+		       ;; check if min and max are members of one of the lists in `regex-collection-word-lists'
+		       ;; (this might not always get the right word list)
+		       ((getsymb min max)
+			(let ((symb (getsymb min max)))
+			  (regex-collection-word-index symb i t)))
+		       ;; anything else
+		       (t (errorm min max)))))
       (setq fieldmaxs ;for each field get the number of different possible values for that field
 	    (cl-loop for i from 0 upto (1- (length (car start2)))
 		     for fieldval = (if (and fieldvals (listp fieldvals) (listp (cdr fieldvals)))
@@ -1671,43 +1672,48 @@ normally be thrown by `re-search-forward'."
 
 ;; regexps related to the internet
 (define-arx internet-rx
-  '((dgt (regex "[0-9]"))
-    (hexdgt (regexp "[:xdigit:]"))
-    (octet (repeat 2 hexdgt))
-    (mac (seq (repeat 5 (seq octet ":")) octet))
-    (ipv4digit (regex-collection-range-regex "0.0.0.0" "255.255.255.255" '(255 255 255 255)))
-    (systemport (regex-collection-range-regex '("0" 4) "1023" '(9 9 9 9)))
-    (registeredport (regex-collection-range-regex "1024" "49151"))
-    (dynamicport (regex-collection-range-regex "49151" "65535"))
-    (portnum (regexp ":[0-9]\\{1,5\\}\\|/[0-9]+"))
-    (ipv4 (seq (repeat 3 (seq ipv4digit "\\.")) ipv4digit (? ":" portnum)))
-    (ipv6 (regexp "(([0-9a-fA-F]{0,4}:){2,7}(:|[0-9a-fA-F]{1,4})(:[0-9]{1,5}|/[0-9]+)?)"))
-    (uuid (regexp "([A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[34][A-Fa-f0-9]{3}-[89ab][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12})"))
-    (url (regexp "((http|https|ftp)://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(/\S*)?)"))
-    (ftp (regexp "(ftp://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(/\S*)?)"))
-    (http (regexp "(http://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(/\S*)?)"))
-    (https (regexp "(https://[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(/\S*)?)"))))
+	    '((dgt (regex "[0-9]"))
+	      (hexdgt (regexp "[:xdigit:]"))
+	      (octet (repeat 2 hexdgt))
+	      (mac (seq (repeat 5 (seq octet ":")) octet))
+	      (ipv4digit (regexp "[0-9]\\|[1-9][0-9]\\|1[0-9][0-9]\\|2[0-4][0-9]\\|25[0-5]"))
+	      (systemport (regexp (regex-collection-range-regex '("0" 4) "1023" '(9 9 9 9))))
+	      (registeredport (regexp "\\_<\\(?:1\\(?:02[4-9]\\|0[3-9][0-9]\\|[1-9][0-9][0-9]\\)\\|[2-9][0-9]\\{3\\}\\|[1-3][0-9]\\{4\\}\\|4\\(?:[0-8][0-9]\\{3\\}\\|9\\(?:0[0-9]\\{2\\}\\|1[0-4][0-9]\\|15[01]\\)\\)\\)\\_>"
+				      ;;(regex-collection-range-regex "1024" "49151")
+				      ))
+	      
+	      (dynamicport (regexp "\\_<\\(?:49\\(?:15[1-9]\\|1[6-9][0-9]\\|[2-9][0-9][0-9]\\)\\|5[0-9]\\{4\\}\\|6\\([0-4][0-9]\\{3\\}\\|5\\(?:[0-4][0-9]\\{2\\}\\|5[0-2][0-9]\\|53[0-5]\\)\\)\\)\\_>"))
+	      (portnum (regexp ":[0-9]\\{1,5\\}\\|/[0-9]+"))
+	      (ipv4 (seq (repeat 3 (seq ipv4digit "\.")) ipv4digit))
+	      (ipv6 (regexp "\\(?:[0-9a-fA-F]\\{0,4\\}:\\)\\{2,7\\}\\(?::\\|[0-9a-fA-F]\\{1,4\\}\\)\\(?::[0-9]\\{1,5\\}\\|/[0-9]+\\)?"))
+	      (uuid (regexp "[A-Fa-f0-9]\\{8\\}-[A-Fa-f0-9]\\{4\\}-[34][A-Fa-f0-9]\\{3\\}-[89ab][A-Fa-f0-9]\\{3\\}-[A-Fa-f0-9]\\{12\\}"))
+	      (lvmuuid (regexp "[A-Za-z0-9]\\{6\\}-\\(?:[A-Za-z0-9]\\{4\\}-\\)\\{5\\}[A-Za-z0-9]\\{6\\}"))
+	      (url (regexp "\\(?:http\\|https\\|ftp\\)://[a-zA-Z0-9\-\.]+\\.[a-zA-Z]\\{2,3\\}\\(?:/[^ \t\n]*\\)?"))
+	      (ftp (regexp "ftp://[a-zA-Z0-9\-\.]+\\.[a-zA-Z]\\{2,3\\}\\(/[^ \t\n]*\\)?"))
+	      (http (regexp "http://[a-zA-Z0-9\-\.]+\\.[a-zA-Z]\\{2,3\\}\\(/[^ \t\n]*\\)?"))
+	      (https (regexp "https://[a-zA-Z0-9\-\.]+\\.[a-zA-Z]\\{2,3\\}\\(/[^ \t\n]*\\)?"))))
 
+;; TODO: check/improve these
 (define-arx datetime-rx
-  '((date (regexp "([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2})"))
-    (datetime (regexp "([0-9]{2}/[0-9]{2}/(19|20)[0-9]{2} [012][0-9]:[012345][0-9])"))
-    (timehms (regexp "([012][0-9]:[012345][0-9]:[012345][0-9])"))
-    (timehm (regexp "([012][0-9]:[012345][0-9])"))
-    (hour (regexp "([012]?[0-9])"))
-    (minute (regexp "([012345]?[0-9])"))
-    (daypart (regexp "([Mm]orning|[Aa]fternoon|[Ee]vening|[Nn]ight)"))
-    (weekday (regexp "([Mm]onday|MONDAY|[Tt]uesday|TUESDAY|[Ww]ednesday|WEDNESDAY|[Tt]hursday|THURSDAY|[Ff]riday|FRIDAY)"))
-    (month (regexp "([Jj]anuary)|JANUARY|[Ff]ebruary|FEBRUARY|[Mm]arch|MARCH|[Aa]pril|APRIL|[Mm]ay|MAY|[Jj]une|JUNE|[Jj]uly|JULY|[Aa]ugust|AUGUST|[Ss]eptember|SEPTEMBER|[Oo]ctober|OCTOBER|[Nn]ovember|NOVEMBER)"))
-    (year (regexp "(19[0-9]{2}|20[0-9]{2})"))))
-
+	    '((date (regexp "[0-9]\\{2\\}/[0-9]\\{2\\}/\\(?:19\\|20\\)[0-9]\\{2\\}"))
+	      (datetime (regexp "[0-9]\\{2\\}/[0-9]\\{2\\}/\\(?:19\\|20\\)[0-9]\\{2\\} [012][0-9]:[012345][0-9]"))
+	      (timehms (regexp "[012][0-9]:[012345][0-9]:[012345][0-9]"))
+	      (timehm (regexp "[012][0-9]:[012345][0-9]"))
+	      (hour (regexp "[012]?[0-9]"))
+	      (minute (regexp "[012345]?[0-9]"))
+	      (daypart (regexp "[Mm]orning|[Aa]fternoon|[Ee]vening|[Nn]ight"))
+	      (weekday (regexp "[Mm]onday|MONDAY|[Tt]uesday|TUESDAY|[Ww]ednesday|WEDNESDAY|[Tt]hursday|THURSDAY|[Ff]riday|FRIDAY"))
+	      (month (regexp "[Jj]anuary|JANUARY|[Ff]ebruary|FEBRUARY|[Mm]arch|MARCH|[Aa]pril|APRIL|[Mm]ay|MAY|[Jj]une|JUNE|[Jj]uly|JULY|[Aa]ugust|AUGUST|[Ss]eptember|SEPTEMBER|[Oo]ctober|OCTOBER|[Nn]ovember|NOVEMBER"))
+	      (year (regexp "(19[0-9]\\{2\\}|20[0-9]\\{2\\})"))))
+;; TODO: check/improve these
 (define-arx address-rx
-  '((email (regexp "(\w[[:alnum:]._-]*\w@\w[[:alnum:].-]*\w\.\w{2,3})"))
-    (ukpostcode (regexp "([a-zA-Z]{1,2}[0-9][0-9A-Za-z]{0,1} ?[0-9]?[A-Za-z]{2})"))
-    (uszipcode (regexp ""))
-    (ukphone (regexp "(\s*\(?0[0-9]{3,5}\)?\s*[0-9]{3,4}\s*[0-9]{3,4}\s*)"))
-    (intlphone (regexp "((\+[1-9][0-9]*(\([0-9]*\)|-[0-9]*-))?[0]?[1-9][0-9\ -]*)"))))
+	    '((email (regexp "\\w[[:alnum:]._-]*\\w@\\w[[:alnum:].-]*\\w\\.\\w\\{2,3\\}"))
+	      (ukpostcode (regexp "\\<\\(?:GIR 0AA\\|gir 0aa\\|[A-Za-z]\\{1,2\\}[0-9][0-9A-Za-z]?\\s-?[0-9][A-Za-z]\\{2\\}\\)\\>"))
+	      (uszipcode (regexp "\\<[0-9]\\{5\\}\\(?:-[0-9]\\{4\\}\\)?\\>"))
+	      (ukphone (regexp "\\<\\(?:\\+44\\s-*\\(?:0\\|(0)\\)?\\|0\\)\\s-*\\(?:[1-9][0-9]\\{1,4\\}\\)\\(?:[ -]*[0-9]\\{3,4\\}\\)\\{1,2\\}\\>"))
+	      (intlphone (regexp "\\<\\+\\(?:[1-9][0-9]\\{0,2\\}\\)\\(?:[[:space:]-().]*[0-9]\\)\\{6,14\\}\\>"))))
 
-(address-rx ukpostcode)
+;;(address-rx ukpostcode)
 
 ;; TODO
 ;; <(extract-text)>
