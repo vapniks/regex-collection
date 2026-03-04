@@ -19,5 +19,8 @@ ample-regexps, dash
 | regex-collection-range-regex | create a regular expression matching all strings between initial and ending strings which can be numbers, words, dates, ip addresses, etc. |
 | regex-collection-optimize    | optimize a regular expression (UNFINISHED)                                                                                                 |
 | regex-collection-invalidp    | check if regular expression is valid (UNFINISHED)                                                                                          |
-
+** Commands
+| regex-collection-get             | prompt the user for a predefined regexp                                                   |
+| regex-collection-search-forward  | prompt the user for a predefined regexp, and search forward for it in the current buffer  |
+| regex-collection-search-backward | prompt the user for a predefined regexp, and search backward for it in the current buffer |
 

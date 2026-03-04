@@ -52,6 +52,11 @@
 ;;
 ;; Below is a complete list of commands:
 ;;
+;; `regex-collection-get' : prompt the user for the name of a predefined regexp and return it
+;; `regex-collection-search-forward' : search the buffer forward for matches to a predefined regexp
+;;                                     (supplied as an arg or prompted for).
+;; `regex-collection-search-backward' : search the buffer backward for matches to a predefined regexp 
+;;                                     (supplied as an arg or prompted for).
 ;;
 ;;; Customizable Options:
 ;;
@@ -1012,7 +1017,7 @@ CHARS should be a list of chars as strings."
 (defsubst regex-collection-complemented-p (grp)
   "Return t if GRP is a complemented chargroup (e.g. \"[^a-z]\"), and nil if uncomplemented.
 If GRP doesn't contain a chargroup regexp, throw an error."
-  (assert (regex-collection-chargroup-p grp))
+  (cl-assert (regex-collection-chargroup-p grp))
   (string-match "^\\[^" grp))
 
 ;; simple-call-tree-info: CHECK
@@ -1030,7 +1035,7 @@ whereas (regex-collection-extract-chars \"[^a-d[:space:][:cntrl:]]\")
   (if (or (regex-collection-charp grp)
 	  (regex-collection-integerp grp))
       (list t (list (string-to-char grp)) nil)
-    (assert (regex-collection-chargroup-p grp))
+    (cl-assert (regex-collection-chargroup-p grp))
     (let* ( ;; indicate whether chargroup is complemented or not
 	   (compp (string-match "^\\[^" grp))
 	   ;; remove surrounding brackets and initial ^ if present
@@ -1082,8 +1087,8 @@ returned unchanged in a list with the uncomplemented chargroup first, and the co
 	(single2 (or (regex-collection-charp grp2)
 		     (regex-collection-integerp grp2))))
     ;; check args 
-    (assert (and (or (regex-collection-chargroup-p grp1) single1)
-		 (or (regex-collection-chargroup-p grp2) single2)))
+    (cl-assert (and (or (regex-collection-chargroup-p grp1) single1)
+		    (or (regex-collection-chargroup-p grp2) single2)))
     ;; check if one group is complemented and the other isn't
     (if (or (and (not single1) (regex-collection-complemented-p grp1)
 		 (or single2 (not (regex-collection-complemented-p grp2))))
@@ -1713,7 +1718,43 @@ normally be thrown by `re-search-forward'."
 	      (ukphone (regexp "\\<\\(?:\\+44\\s-*\\(?:0\\|(0)\\)?\\|0\\)\\s-*\\(?:[1-9][0-9]\\{1,4\\}\\)\\(?:[ -]*[0-9]\\{3,4\\}\\)\\{1,2\\}\\>"))
 	      (intlphone (regexp "\\<\\+\\(?:[1-9][0-9]\\{0,2\\}\\)\\(?:[[:space:]-().]*[0-9]\\)\\{6,14\\}\\>"))))
 
-;;(address-rx ukpostcode)
+;; simple-call-tree-info: DONE
+(defun regex-collection-get (&optional name)
+  "Return the predefined regexp corresponding with symbol `NAME' (prompted for if nil)."
+  (interactive)
+  (let* ((regexgroups '(address-rx internet-rx datetime-rx))
+	 (regexsymbols (mapcar (lambda (x) (cons x (mapcar 'car (get x 'arx-form-defs))))
+			       regexgroups))
+	 (choice (or name
+		     (intern-soft (ido-completing-read "Regexp: "
+						       (mapcar 'symbol-name
+							       (flatten (mapcar 'cdr regexsymbols))))))))
+    (cadr (macroexpand `(,(car (cl-rassoc choice regexsymbols :test (lambda (x lst) (memq x lst))))
+			 ,choice)))))
+
+;; simple-call-tree-info: TODO
+;; it would be better to have a keybinding in `isearch-mode-map' to select and then insert a regexp into the minibuffer.
+(defun regex-collection-search-forward (&optional name)
+  "Prompt for a predefined regexp (or supplied as a the symbol `NAME' arg),
+and search the buffer forward for matches."
+  (interactive)
+  (let ((regexp (if (called-interactively-p)
+		    (call-interactively 'regex-collection-get)
+		  (regex-collection-get name))))
+    (add-to-history 'regexp-search-ring regexp)
+    (search-forward-regexp regexp)))
+
+;; simple-call-tree-info: TODO
+;; it would be better to have a keybinding in `isearch-mode-map' to select and then insert a regexp into the minibuffer.
+(defun regex-collection-search-backward (&optional name)
+  "Prompt for a predefined regexp (or supplied as a the symbol `NAME' arg),
+and search the buffer backward for matches."
+  (interactive)
+  (let ((regexp (if (called-interactively-p)
+		    (call-interactively 'regex-collection-get)
+		  (regex-collection-get name))))
+    (add-to-history 'regexp-search-ring regexp)
+    (search-backward-regexp regexp)))
 
 ;; TODO
 ;; <(extract-text)>
