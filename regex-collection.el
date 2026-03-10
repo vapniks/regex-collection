@@ -1674,19 +1674,18 @@ normally be thrown by `re-search-forward'."
 ;; TODO: regexps for extracting json fields, html parts, etc. country names, wikipedia tables
 ;;       Also following regexp functions are unfinished
 ;;       Get some ideas from here: http://www.regexmagic.com/patterns.html
+;;       Also make them a customizable user option so users can add to them.
 
 ;; regexps related to the internet
 (define-arx internet-rx
 	    '((dgt (regex "[0-9]"))
-	      (hexdgt (regexp "[:xdigit:]"))
+	      (hexdgt (regexp "[[:xdigit:]]"))
 	      (octet (repeat 2 hexdgt))
 	      (mac (seq (repeat 5 (seq octet ":")) octet))
-	      (ipv4digit (regexp "[0-9]\\|[1-9][0-9]\\|1[0-9][0-9]\\|2[0-4][0-9]\\|25[0-5]"))
+	      (ipv4digit (regexp "25[0-5]\\|2[0-4][0-9]\\|1[0-9][0-9]\\|[1-9][0-9]\\|[0-9]")) ;match longest No.s first
 	      (systemport (regexp (regex-collection-range-regex '("0" 4) "1023" '(9 9 9 9))))
-	      (registeredport (regexp "\\_<\\(?:1\\(?:02[4-9]\\|0[3-9][0-9]\\|[1-9][0-9][0-9]\\)\\|[2-9][0-9]\\{3\\}\\|[1-3][0-9]\\{4\\}\\|4\\(?:[0-8][0-9]\\{3\\}\\|9\\(?:0[0-9]\\{2\\}\\|1[0-4][0-9]\\|15[01]\\)\\)\\)\\_>"
-				      ;;(regex-collection-range-regex "1024" "49151")
-				      ))
-	      
+	      ;;(regex-collection-range-regex "1024" "49151") not used since currently it produces an extremely long string
+	      (registeredport (regexp "\\<\\(?:4\\(?:[0-8][0-9]\\{3\\}\\|9\\(?:0[0-9]\\{2\\}\\|1[0-4][0-9]\\|15[01]\\)\\)\\|[1-3][0-9]\\{4\\}\\|[2-9][0-9]\\{3\\}\\|1\\(?:02[4-9]\\|0[3-9][0-9]\\|[1-9][0-9][0-9]\\)\\)\\>")) 
 	      (dynamicport (regexp "\\_<\\(?:49\\(?:15[1-9]\\|1[6-9][0-9]\\|[2-9][0-9][0-9]\\)\\|5[0-9]\\{4\\}\\|6\\([0-4][0-9]\\{3\\}\\|5\\(?:[0-4][0-9]\\{2\\}\\|5[0-2][0-9]\\|53[0-5]\\)\\)\\)\\_>"))
 	      (portnum (regexp ":[0-9]\\{1,5\\}\\|/[0-9]+"))
 	      (ipv4 (seq (repeat 3 (seq ipv4digit "\.")) ipv4digit))
@@ -1712,7 +1711,7 @@ normally be thrown by `re-search-forward'."
 	      (year (regexp "(19[0-9]\\{2\\}|20[0-9]\\{2\\})"))))
 ;; TODO: check/improve these
 (define-arx address-rx
-	    '((email (regexp "\\w[[:alnum:]._-]*\\w@\\w[[:alnum:].-]*\\w\\.\\w\\{2,3\\}"))
+	    '((email (regexp "\\<\\w[[:alnum:]._-]*\\w@\\w[[:alnum:].-]*\\w\\.\\w\\{2,3\\}\\>"))
 	      (ukpostcode (regexp "\\<\\(?:GIR 0AA\\|gir 0aa\\|[A-Za-z]\\{1,2\\}[0-9][0-9A-Za-z]?\\s-?[0-9][A-Za-z]\\{2\\}\\)\\>"))
 	      (uszipcode (regexp "\\<[0-9]\\{5\\}\\(?:-[0-9]\\{4\\}\\)?\\>"))
 	      (ukphone (regexp "\\<\\(?:\\+44\\s-*\\(?:0\\|(0)\\)?\\|0\\)\\s-*\\(?:[1-9][0-9]\\{1,4\\}\\)\\(?:[ -]*[0-9]\\{3,4\\}\\)\\{1,2\\}\\>"))
@@ -1757,6 +1756,8 @@ and search the buffer backward for matches."
     (search-backward-regexp regexp)))
 
 ;; TODO
+;; regex-collection-query-replace-forward/backward? (for regexps with non-shy groups which can be replaced;
+;; could have 2 different versions of regexps, e.g. ipv4 & ipv4b containig non-shy groups).
 ;; <(extract-text)>
 
 (provide 'regex-collection)
