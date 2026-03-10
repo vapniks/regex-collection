@@ -13,13 +13,15 @@
 
 # grep supports BRE, ERE & PCRE, whereas awk & sed only support BRE & ERE however you can use the programming
 # features of awk & sed to get the same results as PCRE. You can also run perl in sed mode with "perl -pe" which
-# allows you to use sed command syntax but with perl regexps
+# allows you to use sed command syntax but with perl regexps.
 # To learn more about PCRE see the perlre manpage.
 
 # The only difference between BRE & ERE is that in BRE the following chars need to be prefixed with a backslash
 # to give them special meaning: ?, +, (, ), {, }, and |
 
 # Each regular expression is parenthesized, but may include useful subgroups. See the comments before each regexp.
+# BRE & ERE do not support shy groups (e.g (?:blahblah)), named groups (e.g (?<name>:blahblah)) or options (e.g. (?i))
+# but PCRE does (see the pcresyntax manpage).
 
 # You can find more regular expressions here: http://regexlib.com/
 
@@ -200,6 +202,10 @@ RXC_BRE[ipv6]="\(\([0-9a-fA-F]\{0,4\}:\)\{2,7\}\(:\|[0-9a-fA-F]\{1,4\}\)\(:${RXC
 # Version 3/4 UUID 
 RXC_ERE[uuid]="([A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[34][A-Fa-f0-9]{3}-[89ab][A-Fa-f0-9]{3}-[A-Fa-f0-9]{12})"
 RXC_BRE[uuid]="\([A-Fa-f0-9]\{8\}-[A-Fa-f0-9]\{4\}-[34][A-Fa-f0-9]\{3\}-[89ab][A-Fa-f0-9]\{3\}-[A-Fa-f0-9]\{12\}\)"
+# LVM UUID
+RXC_ERE[lvmuuid]="([A-Za-z0-9]{6}-([A-Za-z0-9]{4}-){5}[A-Za-z0-9]{6})"
+RXC_BRE[lvmuuid]="\([A-Za-z0-9]\{6\}-\([A-Za-z0-9]\{4\}-\)\{5\}[A-Za-z0-9]\{6\}\)"
+RXC_PCRE[lvmuuid]="([A-Za-z0-9]{6}-(?:[A-Za-z0-9]{4}-){5}[A-Za-z0-9]{6})"
 # domain names
 RXC_ERE[domain_name]="([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,})"
 RXC_BRE[domain_name]="\([a-zA-Z0-9\-\.]+\.[a-zA-Z]\{2,\}\)"
