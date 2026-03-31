@@ -225,3 +225,13 @@ RXC_BRE[https]="\(https:\/\/${RXC_ERE[domain_name]}\(\/\S*\)\?\)"
 # \1 = file permissions, \2 = number of files, \3 = GID, \4 = UID, \5 = size, \6 = date, \7 = filename
 RXC_ERE[ll]="([rwdx-]{10})\s+([0-9]+)\s+([a-z]+) ([a-z]+)\s+([0-9.KMG]+) ([a-zA-Z]+\s+[0-9]+\s+[0-9:]+) (.+)$"
 RXC_BRE[ll]="\([rwdx-]\{10\}\)\s+\([0-9]+\)\s+\([a-z]+\) \([a-z]+\)\s+\([0-9.KMG]+\) \([a-zA-Z]+\s+[0-9]+\s+[0-9:]+\) \(.+\)$"
+# TODO: git commits, guix channels
+RXC_ERE[guixuid]="([a-z0-9]{32})"
+RXC_BRE[guixuid]="\([a-z0-9]\{32\}\)"
+RXC_ERE[gitcommit]="([a-zA-Z0-9]{7,64})"
+RXC_BRE[gitcommit]="\([a-zA-Z0-9]\{7,64\}\)"
+RXC_ERE[gitcommit7]="([a-zA-Z0-9]{7})"
+RXC_BRE[gitcommit7]="\([a-zA-Z0-9]\{7\}\)"
+RXC_ERE[gitcommit40]="([a-zA-Z0-9]{40})"
+RXC_BRE[gitcommit40]="\([a-zA-Z0-9]\{40\}\)"
+

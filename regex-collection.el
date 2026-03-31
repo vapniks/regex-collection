@@ -1716,6 +1716,12 @@ normally be thrown by `re-search-forward'."
 	      (uszipcode (regexp "\\<[0-9]\\{5\\}\\(?:-[0-9]\\{4\\}\\)?\\>"))
 	      (ukphone (regexp "\\<\\(?:\\+44\\s-*\\(?:0\\|(0)\\)?\\|0\\)\\s-*\\(?:[1-9][0-9]\\{1,4\\}\\)\\(?:[ -]*[0-9]\\{3,4\\}\\)\\{1,2\\}\\>"))
 	      (intlphone (regexp "\\<\\+\\(?:[1-9][0-9]\\{0,2\\}\\)\\(?:[[:space:]-().]*[0-9]\\)\\{6,14\\}\\>"))))
+;; TODO: check/improve these
+(define-arx misc-rx
+	    '((guixuid (regexp "\\<[a-zA-Z0-9]\\{32\\}\\>"))
+	      (gitcommit (regexp "\\<[a-zA-Z0-9]\\{7,64\\}\\>"))
+	      (gitcommit7 (regexp "\\<[a-zA-Z0-9]\\{7\\}\\>"))
+	      (gitcommit40 (regexp "\\<[a-zA-Z0-9]\\{40\\}\\>"))))
 
 ;; simple-call-tree-info: DONE
 (defun regex-collection-get (&optional name)
@@ -1754,6 +1760,11 @@ and search the buffer backward for matches."
 		  (regex-collection-get name))))
     (add-to-history 'regexp-search-ring regexp)
     (search-backward-regexp regexp)))
+
+;; simple-call-tree-info: TODO
+;; function for reading regexps that allows user to press a key to prompt for a predefined regexp to insert
+;; in the prompt, and also highlights matches to the regexp within the current buffer.
+;;(defun read-regexp )
 
 ;; TODO
 ;; regex-collection-query-replace-forward/backward? (for regexps with non-shy groups which can be replaced;
